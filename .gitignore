@@ -3,3 +3,7 @@
 *.mid
 *.txt
 *.zip
+*.yaml
+*.log
+*.json
+*.wandb
