@@ -83,10 +83,12 @@ for idx, val in tqdm(enumerate(train)):
     p = path + 'train/' + val + "/"
     info = torchaudio.info(f"{p}mixture.wav")
     seconds = info.num_frames // 44100
-    for i in range(0, seconds - 10, 10):
+    length_seconds = 5
+    gap_seconds = 2
+    for i in range(0, seconds - length_seconds, gap_seconds):
         start_point = i * 44100
-        if start_point + 441000 < info.num_frames:
-            all_scenes[counter] = {'music_path': p, 'start_point': start_point, 'length': 441000, 'frames' : info.num_frames}
+        if start_point + (44100 * length_seconds) < info.num_frames:
+            all_scenes[counter] = {'music_path': p, 'start_point': start_point, 'length': (44100 * length_seconds), 'frames' : info.num_frames}
             counter += 1
 
 
@@ -121,7 +123,7 @@ def turn_transcription_into_roll(transcription, frames):
 
 
 class AudioDataGenerator(Dataset):
-    def __init__(self, data, sample_rate=HDEMUCS_HIGH_MUSDB.sample_rate, segment_length = 10):
+    def __init__(self, data, sample_rate=HDEMUCS_HIGH_MUSDB.sample_rate, segment_length = 5):
         self.data = data
         self.sample_rate = sample_rate
         self.segment_length = sample_rate * segment_length
@@ -219,8 +221,8 @@ class DrumDemucs(pl.LightningModule):
             depth=6,
         )
 
-        self.flatten_0 = torch.nn.Conv1d(7, 256, 7, padding=3)
-        self.flatten_1 = torch.nn.Conv1d(256, 2, 3, padding=1)
+        #self.flatten_0 = torch.nn.Conv1d(7, 2, 1)
+        #self.flatten_1 = torch.nn.Conv1d(256, 2, 3, padding=1)
         
 
 
@@ -241,15 +243,15 @@ class DrumDemucs(pl.LightningModule):
 
         out = self.demucs_mixer(to_mix)
 
-        # print(out.size())
+        #print(out.size())
 
-        #left = out[:, 0, 0, :]
-        #right = out[:, 0, 1, :]
+        left = out[:, 0, 0, :]
+        right = out[:, 0, 1, :]
 
-        #out_2 = torch.stack([left, right])
+        out_2 = torch.stack([left, right], dim=1)
         
-        out_2 = self.flatten_0(out.squeeze(1))
-        out_2 = self.flatten_1(out_2)
+        #out_2 = self.flatten_0(out.squeeze(1))
+        #out_2 = self.flatten_1(out_2)
 
         #print(out_2.size())
         
@@ -261,7 +263,6 @@ class DrumDemucs(pl.LightningModule):
         audio, drum, drumroll = batch
         
         outputs = self.forward(audio, drumroll)
-        # print(outputs.size())
 
         if batch_idx % 256 == 0:
             input_signal = audio[0].cpu().detach().numpy().T
@@ -271,22 +272,6 @@ class DrumDemucs(pl.LightningModule):
             wandb.log({'audio_reference': [wandb.Audio(drum_signal, caption="Reference", sample_rate=44100)]})
             wandb.log({'audio_output': [wandb.Audio(generated_signal, caption="Output", sample_rate=44100)]})
 
-            # # Create a Plotly figure
-            # fig = go.Figure()
-            
-            # fig.add_trace(go.Scatter(y=drumroll[0].cpu().detach().numpy(), mode='lines', name=f'Signal'))
-            
-            # # Update layout for a better visualization
-            # fig.update_layout(
-            #     title='Tensor Visualization',
-            #     xaxis_title='Sample',
-            #     yaxis_title='Value',
-            #     legend_title='Signal',
-            #     margin=dict(l=20, r=20, t=40, b=20),
-            #     hovermode='closest'
-            # )
-
-            # wandb.log({"Tensor Interactive Plot": wandb.Plotly(fig)})
 
         loss = self.compute_loss(outputs, drum)         
 
@@ -298,7 +283,7 @@ class DrumDemucs(pl.LightningModule):
     def configure_optimizers(self):
         # Define your optimizer and optionally learning rate scheduler here
         optimizer = optim.Adam(self.parameters(), lr=0.001)
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=64, gamma=0.1)
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=256, gamma=0.1)
         return [optimizer], [scheduler]
         
 
@@ -309,7 +294,7 @@ class DrumDemucs(pl.LightningModule):
 
 
 class SaveModelEveryNSteps(pl.Callback):
-    def __init__(self, save_step_frequency=256,):
+    def __init__(self, save_step_frequency=2048,):
         self.save_step_frequency = save_step_frequency
         self.save_path = "D://Github//phd-drum-sep//models//DrumSep//"
         os.makedirs(self.save_path , exist_ok=True)
@@ -349,7 +334,7 @@ trainer = pl.Trainer(
     devices=-1,
     logger=wandb_logger,
     callbacks=[SaveModelEveryNSteps()],
-    accumulate_grad_batches=1,
+    #accumulate_grad_batches=1,
     gradient_clip_val=5,
 )
 
