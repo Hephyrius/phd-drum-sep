@@ -218,12 +218,18 @@ class DrumDemucs(pl.LightningModule):
 
         self.flatten_0 = torch.nn.Conv1d(7, 256, 5, padding=2)
         self.flatten_1 = torch.nn.Conv1d(256, 2, 5, padding=2)
-        
-
 
     def compute_loss(self, outputs, ref_signals):
-        loss = self.loss_fn(outputs, ref_signals) + self.loss_fn_2(outputs, ref_signals)
-        return loss
+        if self.loss_used == 0:
+            loss = self.loss_fn(outputs, ref_signals)
+
+            if loss < 1.3:
+                self.loss_used = 1
+            
+            return loss
+        elif self.loss_used == 1:
+            loss = self.loss_fn_2(outputs, ref_signals)
+            return loss
 
     def forward(self, audio, drumroll):
         # print(drumroll.size())
