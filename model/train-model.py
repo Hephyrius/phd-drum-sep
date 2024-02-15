@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 from torchaudio.pipelines import HDEMUCS_HIGH_MUSDB
 print(torch.cuda.is_available())
 import plotly.graph_objects as go
+from torch.optim import lr_scheduler
 
 
 # # Set Seeds
@@ -195,11 +196,11 @@ class DrumDemucs(pl.LightningModule):
         super(DrumDemucs, self).__init__()
 
         self.loss_fn = auraloss.freq.MultiResolutionSTFTLoss(
-            fft_sizes=[1024, 2048],
-            hop_sizes=[256, 512],
-            win_lengths=[1024, 2048],
-            scale="mel", 
-            n_bins=128,
+            fft_sizes=[1024, 2048, 4096],
+            hop_sizes=[256, 512, 1024],
+            win_lengths=[1024, 2048,4096],
+            #scale="mel", 
+            #n_bins=128,
             sample_rate=44100,
             device="cuda"
         )
@@ -220,6 +221,8 @@ class DrumDemucs(pl.LightningModule):
 
         # self.flatten_0 = torch.nn.Conv1d(5, 256, 3, padding=1)
         # self.flatten_1 = torch.nn.Conv1d(256, 1, 3, padding=1)
+        
+        self.flatten = torch.nn.Conv1d(7, 2, 7, padding=3)
 
 
     def compute_loss(self, outputs, ref_signals):
@@ -241,12 +244,14 @@ class DrumDemucs(pl.LightningModule):
 
         # print(out.size())
 
-        left = out[:, 0, 0, :]
-        right = out[:, 0, 1, :]
+        #left = out[:, 0, 0, :]
+        #right = out[:, 0, 1, :]
 
-        out_2 = torch.stack([left, right])
+        #out_2 = torch.stack([left, right])
+        
+        out_2 = self.flatten(out.squeeze(1))
 
-        # print(out_2.size())
+        #print(out_2.size())
         
 
         return out_2
@@ -293,7 +298,8 @@ class DrumDemucs(pl.LightningModule):
     def configure_optimizers(self):
         # Define your optimizer and optionally learning rate scheduler here
         optimizer = optim.Adam(self.parameters(), lr=0.001)
-        return optimizer
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=64, gamma=0.1)
+        return [optimizer], [scheduler]
         
 
 
@@ -331,7 +337,7 @@ wandb_logger = WandbLogger(project='DrumDemucs', log_model='all')
 # In[15]:
 
 
-audio_data_module = AudioDataModule(all_scenes, batch_size=1, num_workers=0, persistent_workers=False)
+audio_data_module = AudioDataModule(all_scenes, batch_size=4, num_workers=0, persistent_workers=False)
 
 
 # In[16]:
@@ -343,7 +349,7 @@ trainer = pl.Trainer(
     devices=-1,
     logger=wandb_logger,
     callbacks=[SaveModelEveryNSteps()],
-    accumulate_grad_batches=4,
+    accumulate_grad_batches=1,
     gradient_clip_val=5,
 )
 
