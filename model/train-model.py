@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 from torchaudio.pipelines import HDEMUCS_HIGH_MUSDB
 print(torch.cuda.is_available())
 import plotly.graph_objects as go
+import plotly.express as px
 from torch.optim import lr_scheduler
 
 
@@ -95,10 +96,8 @@ for idx, val in tqdm(enumerate(train)):
 # In[8]:
 
 
-def turn_transcription_into_roll(transcription, frames):
-    # Determine your sampling frequency (frames per second)
-    fs = 44100
-    
+def turn_transcription_into_roll(transcription, frames, fs = 44100):
+
     piano_roll_length = int(frames)
     
     # Initialize the piano roll array
@@ -271,8 +270,11 @@ class DrumDemucs(pl.LightningModule):
             wandb.log({'audio_input': [wandb.Audio(input_signal, caption="Input", sample_rate=44100)]})
             wandb.log({'audio_reference': [wandb.Audio(drum_signal, caption="Reference", sample_rate=44100)]})
             wandb.log({'audio_output': [wandb.Audio(generated_signal, caption="Output", sample_rate=44100)]})
-
-
+            
+            for i in range(5):
+                wandb.log({f'drum_{i}': [wandb.Audio(drumroll[0].cpu().detach().numpy()[i, :], caption="Output", sample_rate=44100)]})
+          
+            
         loss = self.compute_loss(outputs, drum)         
 
         self.log('train_loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
