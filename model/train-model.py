@@ -211,7 +211,7 @@ class DrumDemucs(pl.LightningModule):
         self.loss_used = 0
 
         sources = ['drum',
-                   # 'noise',
+                   'noise',
                    ]
         
         self.demucs_mixer =  torchaudio.models.HDemucs(
@@ -220,8 +220,8 @@ class DrumDemucs(pl.LightningModule):
             depth=6,
         )
 
-        #self.flatten_0 = torch.nn.Conv1d(7, 2, 1)
-        #self.flatten_1 = torch.nn.Conv1d(256, 2, 3, padding=1)
+        self.flatten_0 = torch.nn.Conv1d(7, 256, 5, padding=2)
+        self.flatten_1 = torch.nn.Conv1d(256, 2, 5, padding=2)
         
 
 
@@ -244,13 +244,13 @@ class DrumDemucs(pl.LightningModule):
 
         #print(out.size())
 
-        left = out[:, 0, 0, :]
-        right = out[:, 0, 1, :]
+        #left = out[:, 0, 0, :]
+        #right = out[:, 0, 1, :]
 
-        out_2 = torch.stack([left, right], dim=1)
+        #out_2 = torch.stack([left, right], dim=1)
         
-        #out_2 = self.flatten_0(out.squeeze(1))
-        #out_2 = self.flatten_1(out_2)
+        out_2 = self.flatten_0(out[:,0,:,:])
+        out_2 = self.flatten_1(out_2)
 
         #print(out_2.size())
         
