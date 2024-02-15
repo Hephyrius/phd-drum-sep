@@ -196,12 +196,8 @@ class DrumDemucs(pl.LightningModule):
     def __init__(self):
         super(DrumDemucs, self).__init__()
 
-        self.loss_fn = auraloss.freq.MultiResolutionSTFTLoss(
-            fft_sizes=[1024, 2048, 4096],
-            hop_sizes=[256, 512, 1024],
-            win_lengths=[1024, 2048,4096],
-            #scale="mel", 
-            #n_bins=128,
+
+        self.loss_fn = auraloss.freq.RandomResolutionSTFTLoss(
             sample_rate=44100,
             device="cuda"
         )
