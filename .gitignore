@@ -8,3 +8,7 @@
 *.json
 *.wandb
 *.png
+*.ckpt
+*.bak
+*-checkpoint.ipynb
+*\.ipynb_checkpoints\*
