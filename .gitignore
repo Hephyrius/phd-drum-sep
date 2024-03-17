@@ -12,3 +12,4 @@
 *.bak
 *-checkpoint.ipynb
 *\.ipynb_checkpoints\*
+*.0
