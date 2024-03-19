@@ -13,3 +13,6 @@
 *-checkpoint.ipynb
 *\.ipynb_checkpoints\*
 *.0
+*.mp4
+data/musdb18_stems/README.md
+model/drum_demus/train-model-Copy1.ipynb
