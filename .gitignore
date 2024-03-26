@@ -19,3 +19,7 @@ model/drum_demus/train-model-Copy1.ipynb
 /model/drum_demus_smaller/.ipynb_checkpoints
 *.2
 *.1
+*.mp3
+*.beats
+data/MDBDrums-master/MIREX2017.md
+data/MDBDrums-master/README.md
